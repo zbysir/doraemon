@@ -2,7 +2,7 @@ package log
 
 import (
 	"bytes"
-	"github.com/zbysir/writeflow/internal/pkg/config"
+	"github.com/zbysir/doraemon/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"

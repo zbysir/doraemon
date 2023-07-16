@@ -1,7 +1,7 @@
 package gobilly
 
 import (
-	"github.com/zbysir/writeflow/internal/pkg/db"
+	"github.com/zbysir/doraemon/db"
 	"io/ioutil"
 	"testing"
 )

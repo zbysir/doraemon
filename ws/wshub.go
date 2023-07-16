@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/zbysir/writeflow/internal/pkg/ttlpool"
+	"github.com/zbysir/doraemon/ttlpool"
 	"io"
 	"math/rand"
 	"sync"

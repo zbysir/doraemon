@@ -2,7 +2,7 @@ package gobilly
 
 import (
 	"github.com/go-git/go-billy/v5/osfs"
-	"github.com/zbysir/writeflow/internal/pkg/log"
+	"github.com/zbysir/doraemon/log"
 	"io/fs"
 	"path/filepath"
 	"testing"

@@ -3,7 +3,7 @@ package easyfs
 import (
 	"fmt"
 	"github.com/go-git/go-billy/v5"
-	"github.com/zbysir/writeflow/internal/pkg/log"
+	"github.com/zbysir/doraemon/log"
 	"io"
 	"io/fs"
 	"os"
