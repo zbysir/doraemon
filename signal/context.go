@@ -29,7 +29,7 @@ func NewContext(sig ...os.Signal) (ctx context.Context, cancel func()) {
 	return
 }
 
-// 等待Term和Int信号量关闭
+// NewTermContext 等待 Term 和 Int 信号量关闭
 func NewTermContext() (ctx context.Context, cancel func()) {
 	return NewContext(syscall.SIGINT, syscall.SIGTERM)
 }

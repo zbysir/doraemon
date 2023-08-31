@@ -8,6 +8,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
