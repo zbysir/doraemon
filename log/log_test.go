@@ -1,6 +1,9 @@
 package log
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestColor(t *testing.T) {
 	//SetDev(true)
@@ -30,4 +33,9 @@ func TestFormat(t *testing.T) {
 	})
 
 	l.Infof("123")
+}
+
+func TestTestContext(t *testing.T) {
+	ctx := WithFieldContext(context.Background(), "traceId", "bbb")
+	WithContext(ctx).Infof("%v", "info")
 }

@@ -2,6 +2,7 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"github.com/zbysir/doraemon/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,6 +17,26 @@ func Warnf(template string, args ...interface{})  { innerLogger.Warnf(template, 
 func Errorf(template string, args ...interface{}) { innerLogger.Errorf(template, args...) }
 func Fatalf(template string, args ...interface{}) { innerLogger.Fatalf(template, args...) }
 func Panicf(template string, args ...interface{}) { innerLogger.Panicf(template, args...) }
+
+type fieldCtxKey struct{}
+
+func WithFieldContext(ctx context.Context, fields ...any) context.Context {
+	if f, ok := ctx.Value(fieldCtxKey{}).([]any); ok {
+		fields = append(f, fields...)
+	}
+	ctx = context.WithValue(ctx, fieldCtxKey{}, fields)
+	return ctx
+}
+
+func WithContext(ctx context.Context) *zap.SugaredLogger {
+	if ctx == nil {
+		return innerLogger
+	}
+	if f, ok := ctx.Value(fieldCtxKey{}).([]any); ok {
+		return innerLogger.With(f...)
+	}
+	return innerLogger
+}
 
 var innerLogger *zap.SugaredLogger
 
