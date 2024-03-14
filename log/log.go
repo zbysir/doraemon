@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
-	"time"
 )
 
 func Debugf(template string, args ...interface{}) { innerLogger.Debugf(template, args...) }
@@ -85,6 +84,7 @@ type Options struct {
 	DisableTime   bool
 	DisableLevel  bool
 	DisableCaller bool
+	TimeLayout    string
 	CallerSkip    int
 	Name          string
 }
@@ -99,7 +99,10 @@ func New(o Options) *zap.SugaredLogger {
 	if o.DisableTime {
 		zapconfig.EncoderConfig.EncodeTime = nil
 	} else {
-		zapconfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.StampMilli)
+		if o.TimeLayout == "" {
+			o.TimeLayout = "2006/01/02 15:04:05"
+		}
+		zapconfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(o.TimeLayout)
 	}
 	if o.DisableLevel {
 		zapconfig.EncoderConfig.EncodeLevel = nil
