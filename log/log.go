@@ -3,19 +3,18 @@ package log
 import (
 	"bytes"
 	"context"
-	"github.com/zbysir/doraemon/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
 )
 
-func Debugf(template string, args ...interface{}) { innerLogger.Debugf(template, args...) }
+func Debugf(template string, args ...interface{}) { globalSugaredLoggerSkip1.Debugf(template, args...) }
 
-func Infof(template string, args ...interface{})  { innerLogger.Infof(template, args...) }
-func Warnf(template string, args ...interface{})  { innerLogger.Warnf(template, args...) }
-func Errorf(template string, args ...interface{}) { innerLogger.Errorf(template, args...) }
-func Fatalf(template string, args ...interface{}) { innerLogger.Fatalf(template, args...) }
-func Panicf(template string, args ...interface{}) { innerLogger.Panicf(template, args...) }
+func Infof(template string, args ...interface{})  { globalSugaredLoggerSkip1.Infof(template, args...) }
+func Warnf(template string, args ...interface{})  { globalSugaredLoggerSkip1.Warnf(template, args...) }
+func Errorf(template string, args ...interface{}) { globalSugaredLoggerSkip1.Errorf(template, args...) }
+func Fatalf(template string, args ...interface{}) { globalSugaredLoggerSkip1.Fatalf(template, args...) }
+func Panicf(template string, args ...interface{}) { globalSugaredLoggerSkip1.Panicf(template, args...) }
 
 type fieldCtxKey struct{}
 
@@ -29,37 +28,30 @@ func WithFieldContext(ctx context.Context, fields ...any) context.Context {
 
 func WithContext(ctx context.Context) *zap.SugaredLogger {
 	if ctx == nil {
-		return innerLogger
+		return globalSugaredLogger
 	}
 	if f, ok := ctx.Value(fieldCtxKey{}).([]any); ok {
-		return innerLogger.With(f...)
+		return globalSugaredLogger.With(f...)
 	}
-	return innerLogger
+	return globalSugaredLogger
 }
 
-var innerLogger *zap.SugaredLogger
-
-func Logger() *zap.SugaredLogger {
-	return innerLogger
-}
+var globalSugaredLogger *zap.SugaredLogger
+var globalSugaredLoggerSkip1 *zap.SugaredLogger // for Infof/Errorf in outermost
 
 func init() {
-	SetDev(false)
-}
-
-// SetDev 会影响最低等级
-func SetDev(logDebug bool) {
-	// 如果开启了 env  DEBUG=true，才会打印 Caller
-	disableCaller := !config.IsDebug()
-
-	innerLogger = New(Options{
-		IsDev:         logDebug,
+	SetGlobalLogger(New(Options{
 		To:            nil,
 		DisableTime:   false,
-		DisableCaller: disableCaller,
-		CallerSkip:    1,
+		DisableCaller: false,
+		CallerSkip:    0,
 		Name:          "",
-	})
+	}))
+}
+
+func SetGlobalLogger(o *zap.Logger) {
+	globalSugaredLoggerSkip1 = o.WithOptions(zap.AddCallerSkip(1)).Sugar() // addCallerSkip for Infof/Errorf in outermost
+	globalSugaredLogger = o.Sugar()
 }
 
 type BuffSink struct {
@@ -79,7 +71,7 @@ func (b *BuffSink) Close() error {
 }
 
 type Options struct {
-	IsDev         bool
+	LogLeave      zapcore.Level
 	To            io.Writer
 	DisableTime   bool
 	DisableLevel  bool
@@ -89,10 +81,10 @@ type Options struct {
 	Name          string
 }
 
-func New(o Options) *zap.SugaredLogger {
+func New(o Options) *zap.Logger {
 	zapconfig := zap.NewDevelopmentConfig()
-	if !o.IsDev {
-		zapconfig.Level.SetLevel(zap.InfoLevel)
+	if o.LogLeave != 0 {
+		zapconfig.Level.SetLevel(o.LogLeave)
 	}
 
 	//config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
@@ -141,9 +133,8 @@ func New(o Options) *zap.SugaredLogger {
 	}
 	logger := zap.New(zapcore.NewCore(zapcore.NewConsoleEncoder(zapconfig.EncoderConfig), sink, zapconfig.Level), ops...)
 
-	sugar := logger.Sugar()
 	if o.Name != "" {
-		sugar = sugar.Named(o.Name)
+		logger = logger.Named(o.Name)
 	}
-	return sugar
+	return logger
 }

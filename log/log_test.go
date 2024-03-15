@@ -9,12 +9,11 @@ func TestColor(t *testing.T) {
 	//SetDev(true)
 	buf := BuffSink{}
 	l := New(Options{
-		IsDev:         true,
 		To:            &buf,
-		DisableCaller: true,
+		DisableCaller: false,
 		CallerSkip:    0,
 		Name:          "",
-	})
+	}).Sugar()
 
 	l.Infof("%v", "info")
 	l.Debugf("%v", "debug")
@@ -26,11 +25,10 @@ func TestColor(t *testing.T) {
 
 func TestFormat(t *testing.T) {
 	l := New(Options{
-		IsDev:         true,
-		DisableCaller: true,
+		DisableCaller: false,
 		CallerSkip:    0,
 		Name:          "",
-	})
+	}).Sugar()
 
 	l.Infof("123")
 }
