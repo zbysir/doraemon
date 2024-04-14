@@ -87,7 +87,8 @@ func New(o Options) *zap.Logger {
 		zapconfig.Level.SetLevel(o.LogLeave)
 	}
 
-	//config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	zapconfig.OutputPaths = []string{"stdout"} // default is stderr
+
 	if o.DisableTime {
 		zapconfig.EncoderConfig.EncodeTime = nil
 	} else {
