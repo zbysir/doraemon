@@ -2,33 +2,63 @@ package httpsrv
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"github.com/pires/go-proxyproto"
+	"net"
 	"net/http"
+	"time"
 )
 
 // Service 支持 Start(ctx)
 type Service struct {
-	s  *http.Server
-	sm *http.ServeMux
+	s       *http.Server
+	options options
 }
 
-func NewService(addr string) (*Service, error) {
-	x := http.NewServeMux()
+type options struct {
+	enableProxyProtocol bool
+	handler             http.Handler
+	tlsConfig           *tls.Config
+}
 
+type Option func(*options)
+
+func WithEnableProxyProtocol(enable bool) Option {
+	return func(o *options) {
+		o.enableProxyProtocol = enable
+	}
+}
+
+func WithHandler(handler http.Handler) Option {
+	return func(o *options) {
+		o.handler = handler
+	}
+}
+
+func WithTls(tlsConfig *tls.Config) Option {
+	return func(o *options) {
+		o.tlsConfig = tlsConfig
+	}
+}
+
+func NewService(addr string, ot ...Option) (*Service, error) {
 	httpServer := &http.Server{
-		Addr:    addr,
-		Handler: x,
+		Addr: addr,
 	}
 
-	return &Service{s: httpServer, sm: x}, nil
-}
+	var opts options
+	for _, o := range ot {
+		o(&opts)
+	}
+	if opts.handler != nil {
+		httpServer.Handler = opts.handler
+	}
+	if opts.tlsConfig != nil {
+		httpServer.TLSConfig = opts.tlsConfig
+	}
 
-func (s *Service) Handler(path string, h http.Handler) {
-	s.sm.Handle(path, h)
-}
-
-func (s *Service) HandlerFunc(path string, f func(writer http.ResponseWriter, request *http.Request)) {
-	s.sm.HandleFunc(path, f)
+	return &Service{s: httpServer, options: opts}, nil
 }
 
 func (s *Service) Start(ctx context.Context) error {
@@ -42,7 +72,25 @@ func (s *Service) Start(ctx context.Context) error {
 			}
 		}
 	}()
-	err = s.s.ListenAndServe()
+
+	ln, err := net.Listen("tcp", s.s.Addr)
+	if err != nil {
+		return err
+	}
+
+	if s.options.enableProxyProtocol {
+		ln = &proxyproto.Listener{
+			Listener:          ln,
+			ReadHeaderTimeout: 10 * time.Second,
+		}
+	}
+
+	if s.options.tlsConfig != nil {
+		err = s.s.ServeTLS(ln, "", "")
+	} else {
+		err = s.s.Serve(ln)
+	}
+
 	if err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
