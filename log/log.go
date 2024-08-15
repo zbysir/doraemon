@@ -36,6 +36,10 @@ func WithContext(ctx context.Context) *zap.SugaredLogger {
 	return globalSugaredLogger
 }
 
+func WithOptions(opts ...zap.Option) *zap.SugaredLogger {
+	return globalSugaredLogger.WithOptions(opts...)
+}
+
 var globalSugaredLogger *zap.SugaredLogger
 var globalSugaredLoggerSkip1 *zap.SugaredLogger // for Infof/Errorf in outermost
 
