@@ -1,4 +1,4 @@
-package memcache
+package ttlru
 
 import (
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -6,7 +6,8 @@ import (
 )
 
 type TTLru[T any] struct {
-	cache *lru.Cache[string, memCacheItem[T]]
+	cache   *lru.Cache[string, memCacheItem[T]]
+	maxSize int
 }
 
 func NewTTLru[T any](size int) *TTLru[T] {
@@ -14,23 +15,9 @@ func NewTTLru[T any](size int) *TTLru[T] {
 	if err != nil {
 		panic(err)
 	}
-
-	go func() {
-		for range time.Tick(4 * time.Hour) {
-			for _, k := range c.Keys() {
-				v, ok := c.Get(k)
-				if !ok {
-					continue
-				}
-				if v.expireAt.Before(time.Now()) {
-					c.Remove(k)
-				}
-			}
-		}
-	}()
-
 	return &TTLru[T]{
-		cache: c,
+		cache:   c,
+		maxSize: size,
 	}
 }
 
@@ -50,9 +37,20 @@ func (c *TTLru[T]) Get(key string) (t T, exist bool) {
 	return x.i, true
 }
 
+func (c *TTLru[T]) Size() (curr, max int) {
+	return c.cache.Len(), c.maxSize
+}
+func (c *TTLru[T]) Keys() []string {
+	return c.cache.Keys()
+}
+
 func (c *TTLru[T]) Set(key string, v T, ttl time.Duration) {
 	c.cache.Add(key, memCacheItem[T]{
 		i:        v,
 		expireAt: time.Now().Add(ttl),
 	})
+}
+
+func (c *TTLru[T]) Delete(key string) {
+	c.cache.Remove(key)
 }

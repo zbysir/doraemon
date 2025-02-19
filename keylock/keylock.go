@@ -1,3 +1,5 @@
+// 此包废弃，请直接使用 https://github.com/im7mortal/kmutex
+
 package keylock
 
 import (
