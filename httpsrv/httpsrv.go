@@ -4,16 +4,16 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"github.com/pires/go-proxyproto"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/pires/go-proxyproto"
 )
 
-// Service 支持 Start(ctx)
 type Service struct {
-	s       *http.Server
 	options options
+	addr    string
 }
 
 type options struct {
@@ -43,37 +43,41 @@ func WithTls(tlsConfig *tls.Config) Option {
 }
 
 func NewService(addr string, ot ...Option) (*Service, error) {
-	httpServer := &http.Server{
-		Addr: addr,
-	}
-
 	var opts options
 	for _, o := range ot {
 		o(&opts)
 	}
-	if opts.handler != nil {
-		httpServer.Handler = opts.handler
-	}
-	if opts.tlsConfig != nil {
-		httpServer.TLSConfig = opts.tlsConfig
-	}
 
-	return &Service{s: httpServer, options: opts}, nil
+	return &Service{addr: addr, options: opts}, nil
 }
 
 func (s *Service) Start(ctx context.Context) error {
+	httpServer := &http.Server{
+		Addr: s.addr,
+		// baseContext can be used to allow request to get the ctx (global ctx has some data like i18n, etc.)
+		BaseContext: func(listener net.Listener) context.Context {
+			return ctx
+		},
+	}
+	if s.options.handler != nil {
+		httpServer.Handler = s.options.handler
+	}
+	if s.options.tlsConfig != nil {
+		httpServer.TLSConfig = s.options.tlsConfig
+	}
+
 	var err error
 	go func() {
 		select {
 		case <-ctx.Done():
-			err = s.s.Shutdown(ctx)
+			err = httpServer.Shutdown(ctx)
 			if err != nil {
 				return
 			}
 		}
 	}()
 
-	ln, err := net.Listen("tcp", s.s.Addr)
+	ln, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return err
 	}
@@ -86,9 +90,9 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 
 	if s.options.tlsConfig != nil {
-		err = s.s.ServeTLS(ln, "", "")
+		err = httpServer.ServeTLS(ln, "", "")
 	} else {
-		err = s.s.Serve(ln)
+		err = httpServer.Serve(ln)
 	}
 
 	if err != nil {
